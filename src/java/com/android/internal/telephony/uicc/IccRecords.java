@@ -507,7 +507,18 @@ public abstract class IccRecords extends Handler implements IccConstants {
      * GSM/UMTS and the like SIMS
      */
     public String getOperatorNumeric() {
-        return null;
+        if (DBG)
+            log("getOperatorNumeric: IMSI ="+mImsi);
+        if (mImsi == null) {
+            if (DBG) log("getOperatorNumeric: IMSI == null");
+            return null;
+        }
+        if (mMncLength == UNINITIALIZED || mMncLength == UNKNOWN) {
+                mMncLength = 2;
+        }
+        //  Length = length of MCC + length of MNC
+        //  length of mcc = 3 (TS 23.003 Section 2.2)
+        return mImsi.substring(0, 3 + mMncLength);
     }
 
     /**
