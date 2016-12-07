@@ -53,7 +53,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-
+import android.os.SystemProperties;
 /**
  * SubscriptionController to provide an inter-process communication to
  * access Sms in Icc.
@@ -185,7 +185,14 @@ public class SubscriptionController extends ISub.Stub {
     }
 
     private boolean isSubInfoReady() {
-        return sSlotIdxToSubId.size() > 0;
+        //return sSlotIdxToSubId.size() > 0;
+	String sim_state ;
+        sim_state = SystemProperties.get("gsm.sim.state");
+        if(sim_state.equals("READY")){
+	logd("sim_state is :" + sim_state);
+	return true;
+	}else
+	return false;
     }
 
     private SubscriptionController(Phone phone) {
@@ -1111,7 +1118,7 @@ public class SubscriptionController extends ISub.Stub {
         if (size == 0)
         {
             if (DBG) logd("[getSlotId]- size == 0, return SIM_NOT_INSERTED instead");
-            return SubscriptionManager.SIM_NOT_INSERTED;
+            return 0;//SubscriptionManager.SIM_NOT_INSERTED;
         }
 
         for (Entry<Integer, Integer> entry: sSlotIdxToSubId.entrySet()) {
@@ -1209,7 +1216,8 @@ public class SubscriptionController extends ISub.Stub {
 
         int size = sSlotIdxToSubId.size();
         if (size == 0) {
-            phoneId = mDefaultPhoneId;
+            //phoneId = mDefaultPhoneId;
+	    phoneId = 0;
             if (DBG) logdl("[getPhoneId]- no sims, returning default phoneId=" + phoneId);
             return phoneId;
         }
@@ -1225,7 +1233,7 @@ public class SubscriptionController extends ISub.Stub {
             }
         }
 
-        phoneId = mDefaultPhoneId;
+        phoneId = 0;//mDefaultPhoneId;
         if (DBG) {
             logdl("[getPhoneId]- subId=" + subId + " not found return default phoneId=" + phoneId);
         }
@@ -1242,7 +1250,8 @@ public class SubscriptionController extends ISub.Stub {
         if (numSubs > 0) {
             int[] dummyValues = new int[numSubs];
             for (int i = 0; i < numSubs; i++) {
-                dummyValues[i] = SubscriptionManager.DUMMY_SUBSCRIPTION_ID_BASE - slotIdx;
+               // dummyValues[i] = SubscriptionManager.DUMMY_SUBSCRIPTION_ID_BASE - slotIdx;
+	       dummyValues[i] = 0;
             }
             if (VDBG) {
                 logd("getDummySubIds: slotIdx=" + slotIdx
