@@ -185,14 +185,18 @@ public class SubscriptionController extends ISub.Stub {
     }
 
     private boolean isSubInfoReady() {
-        //return sSlotIdxToSubId.size() > 0;
-	String sim_state ;
-        sim_state = SystemProperties.get("gsm.sim.state");
-        if(sim_state.equals("READY")){
-	logd("sim_state is :" + sim_state);
-	return true;
-	}else
-	return false;
+	boolean config = SystemProperties.getBoolean("ro.radio.noril", false);
+	if(config == true) {
+        	return sSlotIdxToSubId.size() > 0;
+	} else {
+		String sim_state ;
+        	sim_state = SystemProperties.get("gsm.sim.state");
+        	if(sim_state.equals("READY")){
+			logd("sim_state is :" + sim_state);
+			return true;
+		}else
+			return false;
+		}
     }
 
     private SubscriptionController(Phone phone) {
@@ -1118,7 +1122,11 @@ public class SubscriptionController extends ISub.Stub {
         if (size == 0)
         {
             if (DBG) logd("[getSlotId]- size == 0, return SIM_NOT_INSERTED instead");
-            return 0;//SubscriptionManager.SIM_NOT_INSERTED;
+	    boolean config = SystemProperties.getBoolean("ro.radio.noril", false);
+	    if(config == true)
+            	return SubscriptionManager.SIM_NOT_INSERTED;
+	    else
+		return 0;
         }
 
         for (Entry<Integer, Integer> entry: sSlotIdxToSubId.entrySet()) {
@@ -1215,9 +1223,12 @@ public class SubscriptionController extends ISub.Stub {
         }
 
         int size = sSlotIdxToSubId.size();
+	boolean config = SystemProperties.getBoolean("ro.radio.noril", false);
         if (size == 0) {
-            //phoneId = mDefaultPhoneId;
-	    phoneId = 0;
+	    if(config == true) 
+            	phoneId = mDefaultPhoneId;
+	    else
+	    	phoneId = 0;
             if (DBG) logdl("[getPhoneId]- no sims, returning default phoneId=" + phoneId);
             return phoneId;
         }
@@ -1232,8 +1243,10 @@ public class SubscriptionController extends ISub.Stub {
                 return sim;
             }
         }
-
-        phoneId = 0;//mDefaultPhoneId;
+	if(config == true)
+        	phoneId = mDefaultPhoneId;
+	else
+		phoneId = 0;
         if (DBG) {
             logdl("[getPhoneId]- subId=" + subId + " not found return default phoneId=" + phoneId);
         }
@@ -1247,11 +1260,14 @@ public class SubscriptionController extends ISub.Stub {
         // but no connection came up on sprout with two sims.
         // We need to figure out why and hopefully remove DummySubsIds!!!
         int numSubs = getActiveSubInfoCountMax();
+	boolean config = SystemProperties.getBoolean("ro.radio.noril", false);
         if (numSubs > 0) {
             int[] dummyValues = new int[numSubs];
             for (int i = 0; i < numSubs; i++) {
-               // dummyValues[i] = SubscriptionManager.DUMMY_SUBSCRIPTION_ID_BASE - slotIdx;
-	       dummyValues[i] = 0;
+		if(config == true)
+                	dummyValues[i] = SubscriptionManager.DUMMY_SUBSCRIPTION_ID_BASE - slotIdx;
+		else
+			dummyValues[i] = 0;
             }
             if (VDBG) {
                 logd("getDummySubIds: slotIdx=" + slotIdx
