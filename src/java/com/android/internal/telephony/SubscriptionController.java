@@ -31,6 +31,7 @@ import android.os.Binder;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.UserHandle;
+import android.os.SystemProperties;
 import android.provider.Settings;
 import android.telephony.RadioAccessFamily;
 import android.telephony.Rlog;
@@ -86,7 +87,7 @@ import java.util.stream.Collectors;
 public class SubscriptionController extends ISub.Stub {
     static final String LOG_TAG = "SubscriptionController";
     static final boolean DBG = true;
-    static final boolean VDBG = false;
+    static final boolean VDBG = true;
     static final boolean DBG_CACHE = false;
     static final int MAX_LOCAL_LOG_LINES = 500; // TODO: Reduce to 100 when 17678050 is fixed
     private static final int DEPRECATED_SETTING = -1;
@@ -216,7 +217,18 @@ public class SubscriptionController extends ISub.Stub {
     }
 
     private boolean isSubInfoReady() {
-        return sSlotIndexToSubId.size() > 0;
+	boolean config = SystemProperties.getBoolean("ro.radio.noril", false);
+	if(config == true) {
+		return sSlotIndexToSubId.size() > 0;
+	} else {
+		String sim_state ;
+		sim_state = SystemProperties.get("gsm.sim.state");
+		if(sim_state.equals("READY") || sim_state.equals("LOADED")){
+			logd("sim_state is :" + sim_state);
+			return true;
+		}else
+			return false;
+		}
     }
 
     private SubscriptionController(Phone phone) {
@@ -1414,7 +1426,11 @@ public class SubscriptionController extends ISub.Stub {
         if (size == 0)
         {
             if (DBG) logd("[getSlotIndex]- size == 0, return SIM_NOT_INSERTED instead");
-            return SubscriptionManager.SIM_NOT_INSERTED;
+	    boolean config = SystemProperties.getBoolean("ro.radio.noril", false);
+	    if(config == true)
+            	return SubscriptionManager.SIM_NOT_INSERTED;
+	    else
+		return 0;
         }
 
         for (Entry<Integer, Integer> entry: sSlotIndexToSubId.entrySet()) {
@@ -1511,8 +1527,12 @@ public class SubscriptionController extends ISub.Stub {
         }
 
         int size = sSlotIndexToSubId.size();
+	boolean config = SystemProperties.getBoolean("ro.radio.noril", false);
         if (size == 0) {
-            phoneId = mDefaultPhoneId;
+	    if(config == true)
+		phoneId = mDefaultPhoneId;
+	    else
+		phoneId = 0;
             if (DBG) logdl("[getPhoneId]- no sims, returning default phoneId=" + phoneId);
             return phoneId;
         }
@@ -1527,8 +1547,10 @@ public class SubscriptionController extends ISub.Stub {
                 return sim;
             }
         }
-
-        phoneId = mDefaultPhoneId;
+	if(config == true)
+		phoneId = mDefaultPhoneId;
+	else
+		phoneId = 0;
         if (DBG) {
             logdl("[getPhoneId]- subId=" + subId + " not found return default phoneId=" + phoneId);
         }
@@ -1542,10 +1564,14 @@ public class SubscriptionController extends ISub.Stub {
         // but no connection came up on sprout with two sims.
         // We need to figure out why and hopefully remove DummySubsIds!!!
         int numSubs = getActiveSubInfoCountMax();
+	boolean config = SystemProperties.getBoolean("ro.radio.noril", false);
         if (numSubs > 0) {
             int[] dummyValues = new int[numSubs];
             for (int i = 0; i < numSubs; i++) {
+		if(config == true)
                 dummyValues[i] = SubscriptionManager.DUMMY_SUBSCRIPTION_ID_BASE - slotIndex;
+		else
+			dummyValues[i] = 0;
             }
             if (VDBG) {
                 logd("getDummySubIds: slotIndex=" + slotIndex
@@ -1616,9 +1642,11 @@ public class SubscriptionController extends ISub.Stub {
     @Override
     public int getDefaultSubId() {
         int subId;
+
         boolean isVoiceCapable = mContext.getResources().getBoolean(
                 com.android.internal.R.bool.config_voice_capable);
-        if (isVoiceCapable) {
+        
+	if (isVoiceCapable) {
             subId = getDefaultVoiceSubId();
             if (VDBG) logdl("[getDefaultSubId] isVoiceCapable subId=" + subId);
         } else {
