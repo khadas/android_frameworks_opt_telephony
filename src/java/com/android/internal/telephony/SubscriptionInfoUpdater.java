@@ -33,6 +33,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.os.SystemProperties;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.provider.Settings.Global;
@@ -365,11 +366,19 @@ public class SubscriptionInfoUpdater extends Handler {
             logd("handleSimLoaded: IccRecords null");
             return;
         }
-        if (IccUtils.stripTrailingFs(records.getFullIccId()) == null) {
-            logd("handleSimLoaded: IccID null");
-            return;
+        boolean config = SystemProperties.getBoolean("ro.radio.noril", false);
+        if(config == true) {
+            if (IccUtils.stripTrailingFs(records.getFullIccId()) == null) {
+                logd("handleSimLoaded: IccID null");
+                return;
+            }
+            mIccId[slotId] = IccUtils.stripTrailingFs(records.getFullIccId());
+        } else {
+            String sim_state = SystemProperties.get("gsm.sim.state");
+            if(sim_state.equals("READY") || sim_state.equals("LOADED")){
+               mIccId[slotId] = "89860002091070314495";
+            }
         }
-        mIccId[slotId] = IccUtils.stripTrailingFs(records.getFullIccId());
 
         if (isAllIccIdQueryDone()) {
             updateSubscriptionInfoByIccId();
@@ -529,19 +538,23 @@ public class SubscriptionInfoUpdater extends Handler {
             SubscriptionController.getInstance().clearSubInfo();
         }
 
-        int index = 0;
-        for (int i = 0; i < PROJECT_SIM_NUM; i++) {
-            if (mInsertSimState[i] == SIM_NOT_INSERT) {
-                continue;
-            }
-            index = 2;
-            for (int j = i + 1; j < PROJECT_SIM_NUM; j++) {
-                if (mInsertSimState[j] == SIM_NOT_CHANGE && mIccId[i].equals(mIccId[j])) {
-                    mInsertSimState[i] = 1;
-                    mInsertSimState[j] = index;
-                    index++;
+        boolean config = SystemProperties.getBoolean("ro.radio.noril", false);
+        if(config == true) {
+            int index = 0;
+            for (int i = 0; i < PROJECT_SIM_NUM; i++) {
+                if (mInsertSimState[i] == SIM_NOT_INSERT) {
+                    continue;
+                }
+                index = 2;
+                for (int j = i + 1; j < PROJECT_SIM_NUM; j++) {
+                    if (mInsertSimState[j] == SIM_NOT_CHANGE && mIccId[i].equals(mIccId[j])) {
+                        mInsertSimState[i] = 1;
+                        mInsertSimState[j] = index;
+                        index++;
+                    }
                 }
             }
+
         }
 
         ContentResolver contentResolver = mContext.getContentResolver();
@@ -572,12 +585,21 @@ public class SubscriptionInfoUpdater extends Handler {
                     SubscriptionController.getInstance().refreshCachedActiveSubscriptionInfoList();
                 }
             } else {
-                if (mInsertSimState[i] == SIM_NOT_CHANGE) {
-                    // no SIM inserted last time, but there is one SIM inserted now
-                    mInsertSimState[i] = SIM_CHANGED;
+                if(config == true) {
+                    if (mInsertSimState[i] == SIM_NOT_CHANGE) {
+                       // no SIM inserted last time, but there is one SIM inserted now
+                       mInsertSimState[i] = SIM_CHANGED;
+                    }
+                    logd("updateSubscriptionInfoByIccId: No SIM in slot " + i + " last time");
+                } else {
+                    String sim_state = SystemProperties.get("gsm.sim.state");
+                    if(sim_state.equals("READY") || sim_state.equals("LOADED")) {
+                        logd("updateSubscriptionInfoByIccId: new sim for 4G dongle");
+                        logd("insertedSimCount = " + insertedSimCount);
+                        mInsertSimState[i] = SIM_NEW;
+                    }
                 }
                 oldIccId[i] = ICCID_STRING_FOR_NO_SIM;
-                logd("updateSubscriptionInfoByIccId: No SIM in slot " + i + " last time");
             }
         }
 
