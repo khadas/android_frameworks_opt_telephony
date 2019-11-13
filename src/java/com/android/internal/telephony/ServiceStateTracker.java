@@ -132,7 +132,7 @@ import java.util.regex.PatternSyntaxException;
 public class ServiceStateTracker extends Handler {
     static final String LOG_TAG = "SST";
     static final boolean DBG = true;
-    private static final boolean VDBG = false;  // STOPSHIP if true
+    private static final boolean VDBG = true;  // STOPSHIP if true
 
     private static final String PROP_FORCE_ROAMING = "telephony.test.forceRoaming";
 
@@ -819,6 +819,17 @@ public class ServiceStateTracker extends Handler {
         mVoiceRegStateOrRatChangedRegistrants.notifyResult(new Pair<Integer, Integer>(vrs, rat));
     }
 
+    protected boolean notifyServiceStateChanged() {
+	boolean notified = false;
+	try {
+		mPhone.notifyServiceStateChanged(mPhone.getServiceState());
+		notified = true;
+	} catch (NullPointerException ex) {
+		loge("updateServiceStateChanged() Phone already destroyed: " + ex
+			+ "ServiceStateChanged not notified");
+	}
+	return notified;
+    }
     /**
      * Notify all mDataConnectionRatChangeRegistrants using an
      * AsyncResult in msg.obj where AsyncResult#result contains the
@@ -1198,6 +1209,7 @@ public class ServiceStateTracker extends Handler {
 
             case EVENT_NETWORK_STATE_CHANGED:
                 modemTriggeredPollState();
+		mCi.getSignalStrength(obtainMessage(EVENT_GET_SIGNAL_STRENGTH));
                 break;
 
             case EVENT_GET_SIGNAL_STRENGTH:
@@ -1210,7 +1222,7 @@ public class ServiceStateTracker extends Handler {
                 }
                 ar = (AsyncResult) msg.obj;
                 onSignalStrengthResult(ar);
-                queueNextSignalStrengthPoll();
+                //queueNextSignalStrengthPoll();
 
                 break;
 
@@ -2096,6 +2108,7 @@ public class ServiceStateTracker extends Handler {
                 if (DBG) {
                     log("handlePollStateResultMessage: CS cellular. " + networkRegState);
                 }
+		notifyServiceStateChanged();
                 break;
             }
 

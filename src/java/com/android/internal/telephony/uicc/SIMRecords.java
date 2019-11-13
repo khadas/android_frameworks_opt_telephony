@@ -175,6 +175,10 @@ public class SIMRecords extends IccRecords {
     private static final int EVENT_APP_LOCKED = 2 + SYSTEM_EVENT_BASE;
     private static final int EVENT_APP_NETWORK_LOCKED = 3 + SYSTEM_EVENT_BASE;
 
+    private static final int ROCKCHIP_EVENT_BASE = 0x200;
+    private static final int EVENT_ROCKCHIP_GET_ICCID_DONE = 2 + ROCKCHIP_EVENT_BASE;
+
+    private String[] iccid = new String[]{"ICCID"};
 
     // ***** Constructor
 
@@ -832,6 +836,21 @@ public class SIMRecords extends IccRecords {
 
                     log("iccid: " + SubscriptionInfo.givePrintableIccid(mFullIccId));
                     break;
+
+		case EVENT_ROCKCHIP_GET_ICCID_DONE:
+		    isRecordLoadResponse = true;
+		    log("EVENT_ROCKCHIP_GET_ICCID_DONE");
+		    ar = (AsyncResult) msg.obj;
+		    String iccid[] = (String[]) ar.result;
+
+		    if (ar.exception != null) {
+			break;
+		    }
+
+		    mIccId = IccUtils.stripTrailingFs(iccid[0]);
+		    mFullIccId = IccUtils.stripTrailingFs(iccid[0]);
+
+		    log("iccid: " + SubscriptionInfo.givePrintableIccid(mFullIccId));
 
                 case EVENT_GET_AD_DONE:
                     isRecordLoadResponse = true;
@@ -1495,6 +1514,9 @@ public class SIMRecords extends IccRecords {
 
         loadEfLiAndEfPl();
 
+	mCi.invokeOemRilRequestStrings(iccid, obtainMessage(EVENT_ROCKCHIP_GET_ICCID_DONE));
+	mRecordsToLoad++;
+
         mFh.loadEFTransparent(EF_ICCID, obtainMessage(EVENT_GET_ICCID_DONE));
         mRecordsToLoad++;
     }
@@ -1528,7 +1550,10 @@ public class SIMRecords extends IccRecords {
         mCi.getIMSIForApp(mParentApp.getAid(), obtainMessage(EVENT_GET_IMSI_DONE));
         mRecordsToLoad++;
 
-        mFh.loadEFTransparent(EF_ICCID, obtainMessage(EVENT_GET_ICCID_DONE));
+        mCi.invokeOemRilRequestStrings(iccid, obtainMessage(EVENT_ROCKCHIP_GET_ICCID_DONE));
+	mRecordsToLoad++;
+
+	mFh.loadEFTransparent(EF_ICCID, obtainMessage(EVENT_GET_ICCID_DONE));
         mRecordsToLoad++;
 
         // FIXME should examine EF[MSISDN]'s capability configuration
