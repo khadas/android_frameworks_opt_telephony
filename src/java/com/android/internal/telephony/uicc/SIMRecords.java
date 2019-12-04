@@ -851,6 +851,7 @@ public class SIMRecords extends IccRecords {
 		    mFullIccId = IccUtils.stripTrailingFs(iccid[0]);
 
 		    log("iccid: " + SubscriptionInfo.givePrintableIccid(mFullIccId));
+		    break;
 
                 case EVENT_GET_AD_DONE:
                     isRecordLoadResponse = true;
