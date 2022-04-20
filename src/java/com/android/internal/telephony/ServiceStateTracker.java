@@ -1189,7 +1189,7 @@ public class ServiceStateTracker extends Handler {
 
                 // The radio is telling us about signal strength changes
                 // we don't have to ask it
-                mDontPollSignalStrength = true;
+                //mDontPollSignalStrength = true;
 
                 onSignalStrengthResult(ar);
                 break;
